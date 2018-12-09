@@ -89,6 +89,17 @@ class ActiveStorage::Blob < ActiveRecord::Base
     self[:key] ||= self.class.generate_unique_secure_token
   end
 
+  def deliver(method)
+    case method
+    when :redirect
+      Rails.application.routes.url_helpers.route_for(:rails_service_blob, signed_id, filename, only_path: true)
+    when :proxy
+      Rails.application.routes.url_helpers.route_for(:rails_blob_proxy, signed_id, filename, only_path: true)
+    when :direct
+      service_url
+    end
+  end
+
   # Returns an ActiveStorage::Filename instance of the filename that can be
   # queried for basename, extension, and a sanitized version of the filename
   # that's safe to use in URLs.
@@ -114,6 +125,13 @@ class ActiveStorage::Blob < ActiveRecord::Base
   # Returns true if the content_type of this blob is in the text range, like text/plain.
   def text?
     content_type.start_with?("text")
+  end
+
+  def disposition(disposition_override = nil)
+    ActionDispatch::Http::ContentDisposition.format(
+      disposition: disposition_override || "inline",
+      filename: filename.sanitized
+    )
   end
 
 

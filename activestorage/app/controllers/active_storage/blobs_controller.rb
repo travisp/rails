@@ -11,4 +11,17 @@ class ActiveStorage::BlobsController < ActiveStorage::BaseController
     expires_in ActiveStorage::Blob.service.url_expires_in
     redirect_to @blob.service_url(disposition: params[:disposition])
   end
+
+  def proxy
+    expires_in ActiveStorage.proxy_urls_expire_in
+
+    response.headers["Content-Type"] = @blob.content_type
+    response.headers["Content-Disposition"] = @blob.disposition(params[:disposition])
+
+    @blob.download do |chunk|
+      response.stream.write(chunk)
+    end
+  ensure
+    response.stream.close
+  end
 end

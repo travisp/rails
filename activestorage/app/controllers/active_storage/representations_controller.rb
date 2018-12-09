@@ -11,4 +11,19 @@ class ActiveStorage::RepresentationsController < ActiveStorage::BaseController
     expires_in ActiveStorage::Blob.service.url_expires_in
     redirect_to @blob.representation(params[:variation_key]).processed.service_url(disposition: params[:disposition])
   end
+
+  def proxy
+    expires_in ActiveStorage.proxy_urls_expire_in
+
+    representation = @blob.representation(params[:variation_key]).processed
+
+    response.headers["Content-Disposition"] = representation.image.blob.disposition(params[:disposition])
+    response.headers["Content-Type"] = representation.image.content_type
+
+    @blob.service.download(representation.key) do |chunk|
+      response.stream.write(chunk)
+    end
+  ensure
+    response.stream.close
+  end
 end

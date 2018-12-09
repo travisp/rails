@@ -27,7 +27,7 @@ module ActiveStorage
     #
     # If the +:dependent+ option isn't set, the attachment will be purged
     # (i.e. destroyed) whenever the record is destroyed.
-    def has_one_attached(name, dependent: :purge_later)
+    def has_one_attached(name, dependent: :purge_later, delivery_method: ActiveStorage.delivery_method)
       class_eval <<-CODE, __FILE__, __LINE__ + 1
         def #{name}
           @active_storage_attached_#{name} ||= ActiveStorage::Attached::One.new("#{name}", self, dependent: #{dependent == :purge_later ? ":purge_later" : "false"})
@@ -35,6 +35,10 @@ module ActiveStorage
 
         def #{name}=(attachable)
           #{name}.attach(attachable)
+        end
+
+        def delivery_method
+          :#{delivery_method}
         end
       CODE
 
@@ -74,7 +78,7 @@ module ActiveStorage
     #
     # If the +:dependent+ option isn't set, all the attachments will be purged
     # (i.e. destroyed) whenever the record is destroyed.
-    def has_many_attached(name, dependent: :purge_later)
+    def has_many_attached(name, dependent: :purge_later, delivery_method: ActiveStorage.delivery_method)
       class_eval <<-CODE, __FILE__, __LINE__ + 1
         def #{name}
           @active_storage_attached_#{name} ||= ActiveStorage::Attached::Many.new("#{name}", self, dependent: #{dependent == :purge_later ? ":purge_later" : "false"})
@@ -82,6 +86,10 @@ module ActiveStorage
 
         def #{name}=(attachables)
           #{name}.attach(attachables)
+        end
+
+        def delivery_method
+          :#{delivery_method}
         end
       CODE
 

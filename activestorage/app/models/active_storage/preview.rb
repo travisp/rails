@@ -30,10 +30,10 @@
 class ActiveStorage::Preview
   class UnprocessedError < StandardError; end
 
-  attr_reader :blob, :variation
+  attr_reader :blob, :variation, :attachment
 
-  def initialize(blob, variation_or_variation_key)
-    @blob, @variation = blob, ActiveStorage::Variation.wrap(variation_or_variation_key)
+  def initialize(blob, variation_or_variation_key, attachment = nil)
+    @blob, @variation, @attachment = blob, ActiveStorage::Variation.wrap(variation_or_variation_key), attachment
   end
 
   # Processes the preview if it has not been processed yet. Returns the receiving Preview instance for convenience:
@@ -63,6 +63,15 @@ class ActiveStorage::Preview
     else
       raise UnprocessedError
     end
+  end
+
+  # Returns a combination key of the blob and the variation that together identifies a specific variant.
+  def key
+    "variants/#{image.key}/#{Digest::SHA256.hexdigest(variation.key)}"
+  end
+
+  def deliver(method)
+    variation.deliver(method, self)
   end
 
   private
