@@ -128,10 +128,7 @@ class ActiveStorage::Blob < ActiveRecord::Base
   end
 
   def disposition(disposition_override = nil)
-    ActionDispatch::Http::ContentDisposition.format(
-      disposition: disposition_override || "inline",
-      filename: filename.sanitized
-    )
+    'inline'
   end
 
 
