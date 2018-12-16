@@ -80,6 +80,10 @@ class ActiveStorage::Variant
     self
   end
 
+  def content_type
+    blob.content_type.presence_in(WEB_IMAGE_CONTENT_TYPES) || "image/png"
+  end
+
   private
     def processed?
       service.exist?(key)
@@ -100,10 +104,6 @@ class ActiveStorage::Variant
       else
         ActiveStorage::Filename.new("#{blob.filename.base}.png")
       end
-    end
-
-    def content_type
-      blob.content_type.presence_in(WEB_IMAGE_CONTENT_TYPES) || "image/png"
     end
 
 
