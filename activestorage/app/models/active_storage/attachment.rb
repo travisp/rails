@@ -14,6 +14,8 @@ class ActiveStorage::Attachment < ActiveRecord::Base
 
   delegate_missing_to :blob
 
+  attr_accessor :delivery_method
+
   after_create_commit :analyze_blob_later, :identify_blob
 
   # Synchronously purges the blob (deletes it from the configured service) and destroys the attachment.

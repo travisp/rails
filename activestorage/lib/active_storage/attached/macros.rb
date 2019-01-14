@@ -31,14 +31,12 @@ module ActiveStorage
       class_eval <<-CODE, __FILE__, __LINE__ + 1
         def #{name}
           @active_storage_attached_#{name} ||= ActiveStorage::Attached::One.new("#{name}", self, dependent: #{dependent == :purge_later ? ":purge_later" : "false"})
+          @active_storage_attached_#{name}.attachment&.delivery_method = :#{delivery_method}
+          @active_storage_attached_#{name}
         end
 
         def #{name}=(attachable)
           #{name}.attach(attachable)
-        end
-
-        def delivery_method
-          :#{delivery_method}
         end
       CODE
 
@@ -82,14 +80,14 @@ module ActiveStorage
       class_eval <<-CODE, __FILE__, __LINE__ + 1
         def #{name}
           @active_storage_attached_#{name} ||= ActiveStorage::Attached::Many.new("#{name}", self, dependent: #{dependent == :purge_later ? ":purge_later" : "false"})
+          @active_storage_attached_#{name}.attachments.each do |attachment|
+            attachment.delivery_method = :#{delivery_method}
+          end
+          @active_storage_attached_#{name}
         end
 
         def #{name}=(attachables)
           #{name}.attach(attachables)
-        end
-
-        def delivery_method
-          :#{delivery_method}
         end
       CODE
 
