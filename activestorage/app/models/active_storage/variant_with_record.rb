@@ -30,6 +30,21 @@ class ActiveStorage::VariantWithRecord
     image&.url(**options)
   end
 
+  def deliver_by(method = :redirection, options = { only_path: true })
+    Rails.application.routes.url_helpers.url_for({
+      controller: "active_storage/representations/#{method}",
+      action: 'show',
+      signed_blob_id: blob.signed_id,
+      variation_key: variation.key,
+      filename: blob.filename
+    }.merge(options))
+  end
+
+  # Returns a combination key of the blob and the variation that together identifies a specific variant.
+  def key
+    record.image.key
+  end
+
   alias_method :service_url, :url
   deprecate service_url: :url
 
