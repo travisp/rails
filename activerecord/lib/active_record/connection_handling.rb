@@ -115,12 +115,10 @@ module ActiveRecord
 
         with_handler(role, &blk)
       elsif role
-        if role == writing_role
-          with_handler(role.to_sym) do
-            connection_handler.while_preventing_writes(prevent_writes, &blk)
-          end
-        else
-          with_handler(role.to_sym, &blk)
+        prevent_writes = true if role == reading_role
+
+        with_handler(role.to_sym) do
+          connection_handler.while_preventing_writes(prevent_writes, &blk)
         end
       else
         raise ArgumentError, "must provide a `database` or a `role`."
@@ -181,7 +179,7 @@ module ActiveRecord
     # Return the specification name from the current class or its parent.
     def connection_specification_name
       if !defined?(@connection_specification_name) || @connection_specification_name.nil?
-        return self == Base ? "primary" : superclass.connection_specification_name
+        return self == Base ? Base.name : superclass.connection_specification_name
       end
       @connection_specification_name
     end
@@ -198,6 +196,18 @@ module ActiveRecord
     # Please use only for reading.
     def connection_config
       connection_pool.db_config.configuration_hash
+    end
+    deprecate connection_config: "Use connection_db_config instead"
+
+    # Returns the db_config object from the associated connection:
+    #
+    #  ActiveRecord::Base.connection_db_config
+    #    #<ActiveRecord::DatabaseConfigurations::HashConfig:0x00007fd1acbded10 @env_name="development",
+    #      @spec_name="primary", @config={pool: 5, timeout: 5000, database: "db/development.sqlite3", adapter: "sqlite3"}>
+    #
+    # Use only for reading.
+    def connection_db_config
+      connection_pool.db_config
     end
 
     def connection_pool
@@ -222,7 +232,7 @@ module ActiveRecord
         self.connection_specification_name = nil
       end
 
-      connection_handler.remove_connection(name)
+      connection_handler.remove_connection_pool(name)
     end
 
     def clear_cache! # :nodoc:
@@ -237,17 +247,19 @@ module ActiveRecord
         raise "Anonymous class is not allowed." unless name
 
         config_or_env ||= DEFAULT_ENV.call.to_sym
-        pool_name = primary_class? ? "primary" : name
+        pool_name = primary_class? ? Base.name : name
         self.connection_specification_name = pool_name
 
         db_config = Base.configurations.resolve(config_or_env, pool_name)
-        db_config.configuration_hash[:name] = pool_name
+        db_config.owner_name = pool_name
         db_config
       end
 
       def swap_connection_handler(handler, &blk) # :nodoc:
         old_handler, ActiveRecord::Base.connection_handler = ActiveRecord::Base.connection_handler, handler
-        yield
+        return_value = yield
+        return_value.load if return_value.is_a? ActiveRecord::Relation
+        return_value
       ensure
         ActiveRecord::Base.connection_handler = old_handler
       end

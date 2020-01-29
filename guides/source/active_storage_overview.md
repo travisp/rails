@@ -38,8 +38,8 @@ files.
 Active Storage uses two tables in your application’s database named
 `active_storage_blobs` and `active_storage_attachments`. After creating a new
 application (or upgrading your application to Rails 5.2), run
-`rails active_storage:install` to generate a migration that creates these
-tables. Use `rails db:migrate` to run the migration.
+`bin/rails active_storage:install` to generate a migration that creates these
+tables. Use `bin/rails db:migrate` to run the migration.
 
 WARNING: `active_storage_attachments` is a polymorphic join table that stores your model's class name. If your model's class name changes, you will need to run a migration on this table to update the underlying `record_type` to your model's new class name.
 
@@ -447,7 +447,7 @@ available configuration options in [Configuring Rails Applications](configuring.
 If you need to create a link from outside of controller/view context (Background
 jobs, Cronjobs, etc.), you can access the rails_blob_path like this:
 
-```
+```ruby
 Rails.application.routes.url_helpers.rails_blob_path(user.avatar, only_path: true)
 ```
 
@@ -472,6 +472,8 @@ message.video.open do |file|
   # ...
 end
 ```
+
+It's important to know that the file are not yet available in the `after_create` callback but in the `after_create_commit` only.
 
 File Delivery Methods
 -----------------
@@ -507,6 +509,7 @@ config.active_storage.delivery_methods = {
 ```
 
 It's also possible to create your own delivery methods by implementing the interface ActiveStorage::DeliveryMethod.
+
 Analyzing Files
 ---------------
 

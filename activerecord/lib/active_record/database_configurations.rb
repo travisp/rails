@@ -67,6 +67,7 @@ module ActiveRecord
       default.configuration_hash if default
     end
     alias :[] :default_hash
+    deprecate "[]": "Use configs_for", default_hash: "Use configs_for"
 
     # Returns a single DatabaseConfig object based on the requested environment.
     #
@@ -182,8 +183,10 @@ module ActiveRecord
         db_config = find_db_config(env_name)
 
         if db_config
-          config = db_config.configuration_hash.merge(name: pool_name.to_s)
-          DatabaseConfigurations::HashConfig.new(db_config.env_name, db_config.spec_name, config)
+          config = db_config.configuration_hash.dup
+          db_config = DatabaseConfigurations::HashConfig.new(db_config.env_name, db_config.spec_name, config)
+          db_config.owner_name = pool_name.to_s
+          db_config
         else
           raise AdapterNotSpecified, <<~MSG
             The `#{env_name}` database is not configured for the `#{default_env}` environment.

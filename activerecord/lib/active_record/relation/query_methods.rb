@@ -70,6 +70,35 @@ module ActiveRecord
         @scope
       end
 
+      # Returns a new relation with left outer joins and where clause to idenitfy
+      # missing relations.
+      #
+      # For example, posts that are missing a related author:
+      #
+      #    Post.where.missing(:author)
+      #    # SELECT "posts".* FROM "posts"
+      #    # LEFT OUTER JOIN "authors" ON "authors"."id" = "posts"."author_id"
+      #    # WHERE "authors"."id" IS NULL
+      #
+      # Additionally, multiple relations can be combined. This will return posts
+      # that are missing both an author and any comments:
+      #
+      #    Post.where.missing(:author, :comments)
+      #    # SELECT "posts".* FROM "posts"
+      #    # LEFT OUTER JOIN "authors" ON "authors"."id" = "posts"."author_id"
+      #    # LEFT OUTER JOIN "comments" ON "comments"."post_id" = "posts"."id"
+      #    # WHERE "authors"."id" IS NULL AND "comments"."id" IS NULL
+      def missing(*args)
+        args.each do |arg|
+          reflection = @scope.klass._reflect_on_association(arg)
+          opts = { reflection.table_name => { reflection.association_primary_key => nil } }
+          @scope.left_outer_joins!(arg)
+          @scope.where!(opts)
+        end
+
+        @scope
+      end
+
       private
         def not_behaves_as_nor?(opts)
           return false unless opts.is_a?(Hash)
@@ -90,7 +119,7 @@ module ActiveRecord
         when *Relation::SINGLE_VALUE_METHODS
           ["#{name}_value", name == :create_with ? "FROZEN_EMPTY_HASH" : "nil"]
         when *Relation::CLAUSE_METHODS
-          ["#{name}_clause", "DEFAULT_VALUES[:#{name}]"]
+          ["#{name}_clause", name == :from ? "Relation::FromClause.empty" : "Relation::WhereClause.empty"]
         end
 
       class_eval <<-CODE, __FILE__, __LINE__ + 1
@@ -171,7 +200,7 @@ module ActiveRecord
     end
 
     def eager_load!(*args) # :nodoc:
-      self.eager_load_values += args
+      self.eager_load_values |= args
       self
     end
 
@@ -185,7 +214,7 @@ module ActiveRecord
     end
 
     def preload!(*args) # :nodoc:
-      self.preload_values += args
+      self.preload_values |= args
       self
     end
 
@@ -334,7 +363,7 @@ module ActiveRecord
     def group!(*args) # :nodoc:
       args.flatten!
 
-      self.group_values += args
+      self.group_values |= args
       self
     end
 
@@ -447,7 +476,7 @@ module ActiveRecord
             raise ArgumentError, "Called unscope() with invalid unscoping argument ':#{scope}'. Valid arguments are :#{VALID_UNSCOPING_VALUES.to_a.join(", :")}."
           end
           assert_mutability!
-          @values[scope] = DEFAULT_VALUES[scope]
+          @values.delete(scope)
         when Hash
           scope.each do |key, target_value|
             if key != :where
@@ -502,7 +531,7 @@ module ActiveRecord
     def joins!(*args) # :nodoc:
       args.compact!
       args.flatten!
-      self.joins_values += args
+      self.joins_values |= args
       self
     end
 
@@ -520,7 +549,7 @@ module ActiveRecord
     def left_outer_joins!(*args) # :nodoc:
       args.compact!
       args.flatten!
-      self.left_outer_joins_values += args
+      self.left_outer_joins_values |= args
       self
     end
 
@@ -1224,7 +1253,9 @@ module ActiveRecord
       end
 
       def table_name_matches?(from)
-        /(?:\A|(?<!FROM)\s)(?:\b#{table.name}\b|#{connection.quote_table_name(table.name)})(?!\.)/i.match?(from.to_s)
+        table_name = Regexp.escape(table.name)
+        quoted_table_name = Regexp.escape(connection.quote_table_name(table.name))
+        /(?:\A|(?<!FROM)\s)(?:\b#{table_name}\b|#{quoted_table_name})(?!\.)/i.match?(from.to_s)
       end
 
       def reverse_sql_order(order_query)
@@ -1361,8 +1392,8 @@ module ActiveRecord
       def structurally_incompatible_values_for_or(other)
         values = other.values
         STRUCTURAL_OR_METHODS.reject do |method|
-          default = DEFAULT_VALUES[method]
-          @values.fetch(method, default) == values.fetch(method, default)
+          v1, v2 = @values[method], values[method]
+          v1 == v2 || (!v1 || v1.empty?) && (!v2 || v2.empty?)
         end
       end
 
@@ -1370,16 +1401,5 @@ module ActiveRecord
         @where_clause_factory ||= Relation::WhereClauseFactory.new(klass, predicate_builder)
       end
       alias having_clause_factory where_clause_factory
-
-      DEFAULT_VALUES = {
-        create_with: FROZEN_EMPTY_HASH,
-        where: Relation::WhereClause.empty,
-        having: Relation::WhereClause.empty,
-        from: Relation::FromClause.empty
-      }
-
-      Relation::MULTI_VALUE_METHODS.each do |value|
-        DEFAULT_VALUES[value] ||= FROZEN_EMPTY_ARRAY
-      end
   end
 end

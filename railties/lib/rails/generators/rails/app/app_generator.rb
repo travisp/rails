@@ -68,7 +68,7 @@ module Rails
 
     def version_control
       if !options[:skip_git] && !options[:pretend]
-        run "git init", capture: options[:quiet]
+        run "git init", capture: options[:quiet], abort_on_failure: false
       end
     end
 
@@ -79,7 +79,7 @@ module Rails
     def app
       directory "app"
 
-      keep_file "app/assets/images"
+      empty_directory_with_keep_file "app/assets/images"
 
       keep_file  "app/controllers/concerns"
       keep_file  "app/models/concerns"
@@ -210,7 +210,6 @@ module Rails
     end
 
     def test
-      empty_directory_with_keep_file "test/fixtures"
       empty_directory_with_keep_file "test/fixtures/files"
       empty_directory_with_keep_file "test/controllers"
       empty_directory_with_keep_file "test/mailers"

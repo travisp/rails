@@ -91,7 +91,7 @@ ruby 2.5.0
 ```
 
 Rails requires Ruby version 2.5.0 or later. If the version number returned is
-less than that number, you'll need to install a fresh copy of Ruby.
+less than that number (such as 2.3.7, or 1.8.7), you'll need to install a fresh copy of Ruby.
 
 TIP: To quickly install Ruby and Ruby on Rails on your system in Windows, you can use
 [Rails Installer](http://railsinstaller.org). For more installation methods for most
@@ -199,7 +199,7 @@ start a web server on your development machine. You can do this by running the
 following in the `blog` directory:
 
 ```bash
-$ rails server
+$ bin/rails server
 ```
 
 TIP: If you are using Windows, you have to pass the scripts under the `bin`
@@ -232,8 +232,7 @@ enough to serve a page.
 
 ### Say "Hello", Rails
 
-To get Rails saying "Hello", you need to create at minimum a _controller_ and a
-_view_.
+To get Rails saying "Hello", you need to create at minimum a _route_, a _controller_ and a _view_.
 
 A controller's purpose is to receive specific requests for the application.
 _Routing_ decides which controller receives which requests. Often, there is more
@@ -242,49 +241,96 @@ different _actions_. Each action's purpose is to collect information to provide
 it to a view.
 
 A view's purpose is to display this information in a human readable format. An
-important distinction to make is that it is the _controller_, not the view,
-where information is collected. The view should just display that information.
+important distinction to make is that the _controller_, not the view,
+is where information is collected. The view should just display that information.
 By default, view templates are written in a language called eRuby (Embedded
 Ruby) which is processed by the request cycle in Rails before being sent to the
 user.
 
+When we make a request to our Rails application, we do so by making a request
+to a particular _route_. To start off, let's create a route in
+`config/routes.rb`:
+
+```ruby
+Rails.application.routes.draw do
+  get "/articles", to: "articles#index"
+
+  # For details on the DSL available within this file, see https://guides.rubyonrails.org/routing.html
+end
+```
+
+This is your application's _routing file_ which holds entries in a special [DSL
+(domain-specific
+language)](https://en.wikipedia.org/wiki/Domain-specific_language) that tells
+Rails how to connect incoming requests to controllers and actions.
+
+The line that we have just added says that we are going to match a `GET
+/articles` request to `articles#index`. This string passed as the `to` option
+represents the _controller_ and _action_ that will be responsible for handling
+this request.
+
+Controllers are classes that group together common methods for handling a
+particular _resource_. The methods inside controllers are given the name
+"actions", as they _act upon_ requests as they come in.
+
 To create a new controller, you will need to run the "controller" generator and
-tell it you want a controller called "Welcome" with an action called "index",
+tell it you want a controller called "articles" with an action called "index",
 just like this:
 
 ```bash
-$ rails generate controller Welcome index
+$ bin/rails generate controller articles index
 ```
 
 Rails will create several files and a route for you.
 
 ```bash
-create  app/controllers/welcome_controller.rb
- route  get 'welcome/index'
+create  app/controllers/articles_controller.rb
+  route  get 'articles/index'
 invoke  erb
-create    app/views/welcome
-create    app/views/welcome/index.html.erb
+create    app/views/articles
+create    app/views/articles/index.html.erb
 invoke  test_unit
-create    test/controllers/welcome_controller_test.rb
+create    test/controllers/articles_controller_test.rb
 invoke  helper
-create    app/helpers/welcome_helper.rb
+create    app/helpers/articles_helper.rb
 invoke    test_unit
 invoke  assets
 invoke    scss
-create      app/assets/stylesheets/welcome.scss
+create      app/assets/stylesheets/articles.scss
 ```
 
-Most important of these are of course the controller, located at
-`app/controllers/welcome_controller.rb` and the view, located at
-`app/views/welcome/index.html.erb`.
+Most important of these is the controller, located at
+`app/controllers/articles_controller.rb`.
 
-Open the `app/views/welcome/index.html.erb` file in your text editor. Delete all
+Let's look at that controller now:
+
+```ruby
+class ArticlesController < ApplicationController
+  def index
+  end
+end
+```
+
+This controller defines a single action, or "method" in common Ruby terms,
+called `index`. This action is where we would define any logic that we would
+want to happen when a request comes in to this action. Right at this moment, we
+don't want this action to do anything, and so we'll keep it blank for now.
+
+When an action is left blank like this, Rails will default to rendering a view
+that matches the name of the controller and the name of the action. Views in a
+Rails application live in `app/views`, and so the default view for this action
+is going to be `app/views/articles/index.html.erb`.
+
+Open the `app/views/articles/index.html.erb` file in your text editor. Delete all
 of the existing code in the file, and replace it with the following single line
 of code:
 
 ```html
 <h1>Hello, Rails!</h1>
 ```
+
+If we go back to our browser and make a request to
+<http://localhost:3000/articles>, we'll see our text appear on the page.
 
 ### Setting the Application Home Page
 
@@ -324,7 +370,7 @@ end
 application to the welcome controller's index action and `get 'welcome/index'`
 tells Rails to map requests to <http://localhost:3000/welcome/index> to the
 welcome controller's index action. This was created earlier when you ran the
-controller generator (`rails generate controller Welcome index`).
+controller generator (`bin/rails generate controller Welcome index`).
 
 Launch the web server again if you stopped it to generate the controller (`rails
 server`) and navigate to <http://localhost:3000> in your browser. You'll see the
@@ -360,13 +406,13 @@ Rails.application.routes.draw do
 end
 ```
 
-If you run `rails routes`, you'll see that it has defined routes for all the
+If you run `bin/rails routes`, you'll see that it has defined routes for all the
 standard RESTful actions.  The meaning of the prefix column (and other columns)
 will be seen later, but for now notice that Rails has inferred the
 singular form `article` and makes meaningful use of the distinction.
 
 ```bash
-$ rails routes
+$ bin/rails routes
        Prefix Verb   URI Pattern                  Controller#Action
 welcome_index GET    /welcome/index(.:format)     welcome#index
      articles GET    /articles(.:format)          articles#index
@@ -389,7 +435,7 @@ create and read. The form for doing this will look like this:
 It will look a little basic for now, but that's ok. We'll look at improving the
 styling for it afterwards.
 
-### Laying down the groundwork
+### Laying down the Groundwork
 
 Firstly, you need a place within the application to create a new article. A
 great place for that would be at `/articles/new`. With the route already
@@ -405,7 +451,7 @@ a controller called `ArticlesController`. You can do this by running this
 command:
 
 ```bash
-$ rails generate controller Articles
+$ bin/rails generate controller Articles
 ```
 
 If you open up the newly generated `app/controllers/articles_controller.rb`
@@ -554,10 +600,10 @@ this:
 
 In this example, the `articles_path` helper is passed to the `:url` option.
 To see what Rails will do with this, we look back at the output of
-`rails routes`:
+`bin/rails routes`:
 
 ```bash
-$ rails routes
+$ bin/rails routes
       Prefix Verb   URI Pattern                  Controller#Action
 welcome_index GET    /welcome/index(.:format)     welcome#index
      articles GET    /articles(.:format)          articles#index
@@ -591,7 +637,7 @@ NOTE: By default `form_with` submits forms using Ajax thereby skipping full page
 redirects. To make this guide easier to get into we've disabled that with
 `local: true` for now.
 
-### Creating articles
+### Creating Articles
 
 To make the "Unknown action" go away, you can define a `create` action within
 the `ArticlesController` class in `app/controllers/articles_controller.rb`,
@@ -643,7 +689,7 @@ This action is now displaying the parameters for the article that are coming in
 from the form. However, this isn't really all that helpful. Yes, you can see the
 parameters but nothing in particular is being done with them.
 
-### Creating the Article model
+### Creating the Article Model
 
 Models in Rails use a singular name, and their corresponding database tables
 use a plural name. Rails provides a generator for creating models, which most
@@ -651,7 +697,7 @@ Rails developers tend to use when creating new models. To create the new model,
 run this command in your terminal:
 
 ```bash
-$ rails generate model Article title:string text:text
+$ bin/rails generate model Article title:string text:text
 ```
 
 With that command we told Rails that we want an `Article` model, together
@@ -670,7 +716,7 @@ models, as that will be done automatically by Active Record.
 
 ### Running a Migration
 
-As we've just seen, `rails generate model` created a _database migration_ file
+As we've just seen, `bin/rails generate model` created a _database migration_ file
 inside the `db/migrate` directory. Migrations are Ruby classes that are
 designed to make it simple to create and modify database tables. Rails uses
 rake commands to run migrations, and it's possible to undo a migration after
@@ -706,7 +752,7 @@ TIP: For more information about migrations, refer to [Active Record Migrations]
 At this point, you can use a rails command to run the migration:
 
 ```bash
-$ rails db:migrate
+$ bin/rails db:migrate
 ```
 
 Rails will execute this migration command and tell you it created the Articles
@@ -723,9 +769,9 @@ NOTE. Because you're working in the development environment by default, this
 command will apply to the database defined in the `development` section of your
 `config/database.yml` file. If you would like to execute migrations in another
 environment, for instance in production, you must explicitly pass it when
-invoking the command: `rails db:migrate RAILS_ENV=production`.
+invoking the command: `bin/rails db:migrate RAILS_ENV=production`.
 
-### Saving data in the controller
+### Saving Data in the Controller
 
 Back in `ArticlesController`, we need to change the `create` action
 to use the new `Article` model to save the data in the database.
@@ -811,7 +857,7 @@ If you submit the form again now, Rails will complain about not finding the
 `show` action. That's not very useful though, so let's add the `show` action
 before proceeding.
 
-As we have seen in the output of `rails routes`, the route for `show` action is
+As we have seen in the output of `bin/rails routes`, the route for `show` action is
 as follows:
 
 ```
@@ -870,10 +916,10 @@ Visit <http://localhost:3000/articles/new> and give it a try!
 
 ![Show action for articles](images/getting_started/show_action_for_articles.png)
 
-### Listing all articles
+### Listing all Articles
 
 We still need a way to list all our articles, so let's do that.
-The route for this as per output of `rails routes` is:
+The route for this as per output of `bin/rails routes` is:
 
 ```
 articles GET    /articles(.:format)          articles#index
@@ -926,7 +972,7 @@ And then finally, add the view for this action, located at
 Now if you go to <http://localhost:3000/articles> you will see a list of all the
 articles that you have created.
 
-### Adding links
+### Adding Links
 
 You can now create, show, and list articles. Now let's add some links to
 navigate through pages.
@@ -1129,8 +1175,8 @@ you attempt to do just that on the new article form
 We've covered the "CR" part of CRUD. Now let's focus on the "U" part, updating
 articles.
 
-The first step we'll take is adding an `edit` action to the 
-`ArticlesController`, generally between the `new` and `create` 
+The first step we'll take is adding an `edit` action to the
+`ArticlesController`, generally between the `new` and `create`
 actions, as shown:
 
 ```ruby
@@ -1379,7 +1425,7 @@ Then do the same for the `app/views/articles/edit.html.erb` view:
 
 We're now ready to cover the "D" part of CRUD, deleting articles from the
 database. Following the REST convention, the route for
-deleting articles as per output of `rails routes` is:
+deleting articles as per output of `bin/rails routes` is:
 
 ```ruby
 DELETE /articles/:id(.:format)      articles#destroy
@@ -1529,7 +1575,7 @@ the `Article` model. This time we'll create a `Comment` model to hold a
 reference to an article. Run this command in your terminal:
 
 ```bash
-$ rails generate model Comment commenter:string body:text article:references
+$ bin/rails generate model Comment commenter:string body:text article:references
 ```
 
 This command will generate four files:
@@ -1580,7 +1626,7 @@ for it, and a foreign key constraint that points to the `id` column of the `arti
 table. Go ahead and run the migration:
 
 ```bash
-$ rails db:migrate
+$ bin/rails db:migrate
 ```
 
 Rails is smart enough to only execute the migrations that have not already been
@@ -1656,7 +1702,7 @@ With the model in hand, you can turn your attention to creating a matching
 controller. Again, we'll use the same generator we used before:
 
 ```bash
-$ rails generate controller Comments
+$ bin/rails generate controller Comments
 ```
 
 This creates four files and one empty directory:

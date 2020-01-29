@@ -298,7 +298,7 @@ module ActionView
       #   class_names({ foo: true, bar: false })
       #    # => "foo"
       #   class_names(nil, false, 123, "", "foo", { bar: true })
-      #    # => "foo bar"
+      #    # => "123 foo bar"
       def class_names(*args)
         safe_join(build_tag_values(*args), " ")
       end
@@ -340,16 +340,16 @@ module ActionView
             case tag_value
             when Hash
               tag_value.each do |key, val|
-                tag_values << key if val
+                tag_values << key.to_s if val && key.present?
               end
             when Array
-              tag_values << build_tag_values(*tag_value).presence
+              tag_values.concat build_tag_values(*tag_value)
             else
               tag_values << tag_value.to_s if tag_value.present?
             end
           end
 
-          tag_values.compact.flatten
+          tag_values
         end
         module_function :build_tag_values
 
